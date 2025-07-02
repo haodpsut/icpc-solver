@@ -1,6 +1,5 @@
+
 {
-  "name": "ICPC AI Solver",
-  "description": "Một ứng dụng web sử dụng AI để phân tích và giải các bài toán lập trình thi đấu. Yêu cầu token để truy cập. Hỗ trợ Google Gemini và nhiều model miễn phí từ OpenRouter (Deepseek, Gemini Flash, Mistral Nemo, Qwen, Gemma, Mai).",
-  "requestFramePermissions": [],
-  "prompt": ""
+  "name": "AI Code Problem Solver",
+  "description": "An application that uses AI models (Gemini or OpenRouter) to analyze competitive programming problems from user-provided text, explain them, and generate C++ solutions."
 }
