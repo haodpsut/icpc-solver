@@ -53,7 +53,7 @@ const ProblemInput: React.FC<ProblemInputProps> = ({ onProblemTextChange, isLoad
   const inactiveTabClass = 'text-slate-400 hover:bg-slate-700';
 
   return (
-    <div className="bg-secondary rounded-lg p-6 h-full flex flex-col">
+    <div className="bg-secondary rounded-lg p-6 flex-grow flex flex-col">
       <div className="flex border-b border-slate-600 mb-4">
         <button onClick={() => setMode(InputMode.TEXT)} className={`px-4 py-2 font-semibold transition-colors ${mode === InputMode.TEXT ? activeTabClass : inactiveTabClass}`}>
           Dán Văn bản
@@ -62,7 +62,7 @@ const ProblemInput: React.FC<ProblemInputProps> = ({ onProblemTextChange, isLoad
           Tải lên PDF
         </button>
       </div>
-      <div className="flex-grow h-full">
+      <div className="flex-grow">
         {mode === InputMode.TEXT && (
           <textarea
             value={text}

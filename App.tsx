@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import ApiKeyModal from './components/ApiKeyModal';
 import ProblemInput from './components/ProblemInput';
@@ -6,10 +7,21 @@ import * as geminiService from './services/geminiService';
 import * as openrouterService from './services/openrouterService';
 import Spinner from './components/Spinner';
 import { BrainIcon, CodeIcon } from './components/icons';
-import { AiProvider } from './types';
+import { AiProvider, OPENROUTER_MODELS, OpenRouterModel } from './types';
+import AccessTokenGate from './components/AccessTokenGate';
+
+const SESSION_ACCESS_KEY = 'app_access_granted';
+
+const providerStorageKeys: Record<AiProvider, string> = {
+  [AiProvider.GEMINI]: 'google_api_key',
+  [AiProvider.OPENROUTER]: 'openrouter_api_key',
+};
 
 const App: React.FC = () => {
+  const [hasAccess, setHasAccess] = useState(sessionStorage.getItem(SESSION_ACCESS_KEY) === 'true');
   const [provider, setProvider] = useState<AiProvider>(AiProvider.GEMINI);
+  const [selectedOpenRouterModel, setSelectedOpenRouterModel] = useState<OpenRouterModel>(OPENROUTER_MODELS[0].id);
+
   const [apiKeys, setApiKeys] = useState<Record<AiProvider, string | null>>({
     [AiProvider.GEMINI]: null,
     [AiProvider.OPENROUTER]: null,
@@ -27,12 +39,9 @@ const App: React.FC = () => {
   const [isLoadingSolution, setIsLoadingSolution] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const providerStorageKeys: Record<AiProvider, string> = {
-    [AiProvider.GEMINI]: 'google_api_key',
-    [AiProvider.OPENROUTER]: 'openrouter_api_key',
-  };
-
   useEffect(() => {
+    if (!hasAccess) return;
+
     const verifyStoredKeys = async () => {
         const geminiKey = localStorage.getItem(providerStorageKeys[AiProvider.GEMINI]);
         const openrouterKey = localStorage.getItem(providerStorageKeys[AiProvider.OPENROUTER]);
@@ -51,7 +60,7 @@ const App: React.FC = () => {
         setKeysVerified(prev => ({ ...prev, ...Object.keys(updates).reduce((acc, k) => ({...acc, [k]: updates[k].verified}), {}) }));
     };
     verifyStoredKeys();
-  }, []);
+  }, [hasAccess]);
 
   const handleKeyVerified = (verifiedKey: string, verifiedProvider: AiProvider) => {
     localStorage.setItem(providerStorageKeys[verifiedProvider], verifiedKey);
@@ -62,7 +71,7 @@ const App: React.FC = () => {
   const currentApiKey = apiKeys[provider];
   const isCurrentKeyVerified = keysVerified[provider];
   
-  const handleCallApi = async (
+  const handleCallApi = useCallback(async (
     apiFn: (apiKey: string, ...args: any[]) => Promise<string>,
     setLoading: (loading: boolean) => void,
     setData: (data: string) => void,
@@ -84,16 +93,16 @@ const App: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [problemText, currentApiKey]);
 
   const handleAnalyze = useCallback(async () => {
     if (provider === AiProvider.GEMINI) {
         handleCallApi(geminiService.generateAnalysis, setIsLoadingAnalysis, setAnalysis, problemText);
     } else {
-        handleCallApi(openrouterService.generateAnalysis, setIsLoadingAnalysis, setAnalysis, problemText);
+        handleCallApi(openrouterService.generateAnalysis, setIsLoadingAnalysis, setAnalysis, problemText, selectedOpenRouterModel);
     }
     setSolution('');
-  }, [provider, currentApiKey, problemText]);
+  }, [provider, problemText, selectedOpenRouterModel, handleCallApi]);
 
   const handleSolve = useCallback(async () => {
     if (!analysis) {
@@ -103,9 +112,13 @@ const App: React.FC = () => {
     if (provider === AiProvider.GEMINI) {
         handleCallApi(geminiService.generateSolution, setIsLoadingSolution, setSolution, problemText, analysis);
     } else {
-        handleCallApi(openrouterService.generateSolution, setIsLoadingSolution, setSolution, problemText, analysis);
+        handleCallApi(openrouterService.generateSolution, setIsLoadingSolution, setSolution, problemText, analysis, selectedOpenRouterModel);
     }
-  }, [provider, currentApiKey, problemText, analysis]);
+  }, [provider, problemText, analysis, selectedOpenRouterModel, handleCallApi]);
+
+  if (!hasAccess) {
+    return <AccessTokenGate onAccessGranted={() => setHasAccess(true)} />;
+  }
 
   if (!isCurrentKeyVerified) {
     return <ApiKeyModal provider={provider} onKeyVerified={handleKeyVerified} />;
@@ -117,21 +130,37 @@ const App: React.FC = () => {
     <div className="min-h-screen bg-primary flex flex-col p-4">
       <header className="text-center mb-6">
         <h1 className="text-4xl font-bold text-light">ICPC AI Solver</h1>
-        <div className="flex justify-center items-center gap-4 mt-4">
-          <p className="text-slate-400">Model đang dùng:</p>
-          <select 
-            value={provider} 
-            onChange={(e) => setProvider(e.target.value as AiProvider)}
-            className="bg-secondary text-light border border-slate-600 rounded-md px-3 py-1 focus:ring-2 focus:ring-accent focus:outline-none"
-          >
-            <option value={AiProvider.GEMINI}>Google Gemini</option>
-            <option value={AiProvider.OPENROUTER}>OlympicCoder (OpenRouter)</option>
-          </select>
+        <div className="flex justify-center items-center flex-wrap gap-4 mt-4">
+          <div className="flex items-center gap-2">
+            <p className="text-slate-400">Nhà cung cấp:</p>
+            <select 
+              value={provider} 
+              onChange={(e) => setProvider(e.target.value as AiProvider)}
+              className="bg-secondary text-light border border-slate-600 rounded-md px-3 py-1 focus:ring-2 focus:ring-accent focus:outline-none"
+            >
+              <option value={AiProvider.GEMINI}>Google Gemini</option>
+              <option value={AiProvider.OPENROUTER}>OpenRouter</option>
+            </select>
+          </div>
+          {provider === AiProvider.OPENROUTER && (
+            <div className="flex items-center gap-2">
+              <p className="text-slate-400">Model:</p>
+              <select 
+                value={selectedOpenRouterModel} 
+                onChange={(e) => setSelectedOpenRouterModel(e.target.value as OpenRouterModel)}
+                className="bg-secondary text-light border border-slate-600 rounded-md px-3 py-1 focus:ring-2 focus:ring-accent focus:outline-none"
+              >
+                {OPENROUTER_MODELS.map(model => (
+                  <option key={model.id} value={model.id}>{model.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
       </header>
       
-      <main className="flex-grow grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-180px)]">
-        <div className="flex flex-col gap-4 h-full">
+      <main className="flex-grow grid grid-cols-1 lg:grid-cols-2 gap-6 min-h-0">
+        <div className="flex flex-col gap-4 min-h-0">
           <ProblemInput onProblemTextChange={setProblemText} isLoading={isLoading} />
           <div className="flex gap-4">
             <button
@@ -152,7 +181,7 @@ const App: React.FC = () => {
             </button>
           </div>
         </div>
-        <div className="h-full overflow-hidden">
+        <div className="overflow-hidden min-h-0">
             <AnalysisDisplay
                 analysis={analysis}
                 solution={solution}

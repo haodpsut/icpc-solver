@@ -1,5 +1,6 @@
 {
   "name": "ICPC AI Solver",
-  "description": "Một ứng dụng web sử dụng AI để phân tích và giải các bài toán lập trình thi đấu. Hỗ trợ Google Gemini và OlympicCoder (qua OpenRouter). Người dùng có thể nhập đề bài bằng văn bản hoặc tải lên file PDF.",
-  "requestFramePermissions": []
+  "description": "Một ứng dụng web sử dụng AI để phân tích và giải các bài toán lập trình thi đấu. Yêu cầu token để truy cập. Hỗ trợ Google Gemini và nhiều model miễn phí từ OpenRouter (Deepseek, Gemini Flash, Mistral Nemo, Qwen, Gemma, Mai).",
+  "requestFramePermissions": [],
+  "prompt": ""
 }

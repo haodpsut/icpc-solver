@@ -1,3 +1,5 @@
+import { OpenRouterModel } from "../types";
+
 /**
  * Verifies the OpenRouter API key by making a small API call.
  * @param apiKey The OpenRouter API key.
@@ -13,7 +15,7 @@ export const verifyApiKey = async (apiKey: string): Promise<boolean> => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'open-r1/olympiccoder-32b',
+        model: 'deepseek/deepseek-chat-v3-0324:free', // Use a reliable free model for verification
         messages: [{ role: 'user', content: 'Hi' }],
         max_tokens: 5,
       }),
@@ -33,9 +35,10 @@ export const verifyApiKey = async (apiKey: string): Promise<boolean> => {
  * Core function to call the OpenRouter API.
  * @param apiKey The API key.
  * @param prompt The complete prompt to send to the model.
+ * @param model The specific OpenRouter model to use.
  * @returns The text response from the model.
  */
-const getCompletion = async (apiKey: string, prompt: string): Promise<string> => {
+const getCompletion = async (apiKey: string, prompt: string, model: OpenRouterModel): Promise<string> => {
   try {
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
@@ -46,7 +49,7 @@ const getCompletion = async (apiKey: string, prompt: string): Promise<string> =>
         'X-Title': 'ICPC AI Solver',
       },
       body: JSON.stringify({
-        model: 'open-r1/olympiccoder-32b',
+        model: model,
         messages: [{ role: 'user', content: prompt }],
       }),
     });
@@ -55,7 +58,7 @@ const getCompletion = async (apiKey: string, prompt: string): Promise<string> =>
 
     if (!response.ok) {
         const errorMessage = data?.error?.message || `HTTP error! status: ${response.status}`;
-        throw new Error(`OpenRouter API Error: ${errorMessage}`);
+        throw new Error(`OpenRouter API Error: - ${errorMessage}`);
     }
 
     if (data.choices && data.choices.length > 0 && data.choices[0].message?.content) {
@@ -72,7 +75,7 @@ const getCompletion = async (apiKey: string, prompt: string): Promise<string> =>
 /**
  * Generates an analysis of the problem statement using OpenRouter.
  */
-export const generateAnalysis = async (apiKey: string, problemText: string): Promise<string> => {
+export const generateAnalysis = async (apiKey: string, problemText: string, model: OpenRouterModel): Promise<string> => {
   const prompt = `Bạn là một huấn luyện viên ICPC chuyên nghiệp. Nhiệm vụ của bạn là phân tích bài toán lập trình thi đấu sau đây. Đừng giải quyết nó vội. Chia nhỏ vấn đề thành các phần sau:
 1.  **Tóm tắt bài toán:** Một bản tóm tắt ngắn gọn, một đoạn văn về mục tiêu.
 2.  **Định dạng Input/Output:** Mô tả rõ ràng dữ liệu đầu vào và đầu ra trông như thế nào.
@@ -84,13 +87,13 @@ export const generateAnalysis = async (apiKey: string, problemText: string): Pro
 \`\`\`
 ${problemText}
 \`\`\``;
-  return getCompletion(apiKey, prompt);
+  return getCompletion(apiKey, prompt, model);
 };
 
 /**
  * Generates a solution for the problem using OpenRouter.
  */
-export const generateSolution = async (apiKey: string, problemText: string, analysisText: string): Promise<string> => {
+export const generateSolution = async (apiKey: string, problemText: string, analysisText: string, model: OpenRouterModel): Promise<string> => {
   const prompt = `Bạn là một người đoạt huy chương vàng ICPC chuyên nghiệp. Nhiệm vụ của bạn là cung cấp một giải pháp hoàn chỉnh cho bài toán lập trình thi đấu sau đây. Sử dụng phân tích được cung cấp làm điểm khởi đầu. Cung cấp giải pháp theo định dạng sau:
 1.  **Hướng tiếp cận chi tiết:** Giải thích từng bước logic đằng sau thuật toán bạn đã chọn. Giải thích tại sao cách tiếp cận này là đúng và đủ hiệu quả để vượt qua trong giới hạn thời gian thông thường, tham chiếu đến các ràng buộc của bài toán.
 2.  **Giải pháp C++:** Cung cấp mã nguồn C++ hoàn chỉnh, có bình luận rõ ràng. Mã phải sạch sẽ, dễ đọc và sẵn sàng để biên dịch.
@@ -104,5 +107,5 @@ Và đây là phân tích ban đầu:
 \`\`\`
 ${analysisText}
 \`\`\``;
-  return getCompletion(apiKey, prompt);
+  return getCompletion(apiKey, prompt, model);
 };
